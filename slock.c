@@ -320,6 +320,7 @@ main(int argc, char **argv) {
 	Display *dpy;
 	int s, nlocks, nscreens;
 	CARD16 standby, suspend, off;
+	BOOL dpms_state;
 
 	ARGBEGIN {
 	case 'v':
@@ -380,10 +381,12 @@ main(int argc, char **argv) {
 	if (nlocks != nscreens)
 		return 1;
 
-	/* DPMS-magic to disable the monitor */
+	/* DPMS magic to disable the monitor */
 	if (!DPMSCapable(dpy))
 		die("slock: DPMSCapable failed\n");
-	if (!DPMSEnable(dpy))
+	if (!DPMSInfo(dpy, &standby, &dpms_state))
+		die("slock: DPMSInfo failed\n");
+	if (!DPMSEnable(dpy) && !dpms_state)
 		die("slock: DPMSEnable failed\n");
 	if (!DPMSGetTimeouts(dpy, &standby, &suspend, &off))
 		die("slock: DPMSGetTimeouts failed\n");
@@ -410,6 +413,8 @@ main(int argc, char **argv) {
 
 	/* reset DPMS values to inital ones */
 	DPMSSetTimeouts(dpy, standby, suspend, off);
+	if (!dpms_state)
+		DPMSDisable(dpy);
 	XSync(dpy, 0);
 
 	return 0;
